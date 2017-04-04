@@ -214,6 +214,7 @@ public class Launcher extends Activity
     /** The different states that Launcher can be in. */
     enum State { NONE, WORKSPACE, APPS, APPS_SPRING_LOADED, WIDGETS, WIDGETS_SPRING_LOADED };
     @Thunk State mState = State.WORKSPACE;
+    @Thunk AnimatorSet mStateAnimation;
     @Thunk LauncherStateTransitionAnimation mStateTransitionAnimation;
 
     private boolean mIsSafeModeEnabled;
@@ -527,8 +528,7 @@ public class Launcher extends Activity
 
             @Override
             public void dismissAllApps() {
-                showWorkspace(WorkspaceStateTransitionAnimation.SCROLL_TO_CURRENT_PAGE, true, null,
-                        false /* notifyLauncherCallbacks */);
+                showWorkspace(true);
             }
         });
         return true;
@@ -785,7 +785,7 @@ public class Launcher extends Activity
             return;
         } else if (requestCode == REQUEST_PICK_WALLPAPER) {
             if (resultCode == RESULT_OK && mWorkspace.isInOverviewMode()) {
-                showWorkspace(false);
+                mWorkspace.exitOverviewMode(false);
             }
             return;
         }
@@ -1219,6 +1219,7 @@ public class Launcher extends Activity
         }
         return false;
     }
+
 
     public void addToCustomContentPage(View customContent,
             CustomContentCallbacks callbacks, String description) {
@@ -2479,7 +2480,7 @@ public class Launcher extends Activity
         } else if (isWidgetsViewVisible())  {
             showOverviewMode(true);
         } else if (mWorkspace.isInOverviewMode()) {
-            showWorkspace(true);
+            mWorkspace.exitOverviewMode(true);
         } else if (mWorkspace.getOpenFolder() != null) {
             Folder openFolder = mWorkspace.getOpenFolder();
             if (openFolder.isEditingName()) {
@@ -2522,14 +2523,14 @@ public class Launcher extends Activity
 
         if (v instanceof Workspace) {
             if (mWorkspace.isInOverviewMode()) {
-                showWorkspace(true);
+                mWorkspace.exitOverviewMode(true);
             }
             return;
         }
 
         if (v instanceof CellLayout) {
             if (mWorkspace.isInOverviewMode()) {
-                showWorkspace(mWorkspace.indexOfChild(v), true);
+                mWorkspace.exitOverviewMode(mWorkspace.indexOfChild(v), true);
             }
         }
 
@@ -3177,9 +3178,7 @@ public class Launcher extends Activity
 
         if (v instanceof Workspace) {
             if (!mWorkspace.isInOverviewMode()) {
-
-                if (!mWorkspace.isTouchActive()) {
-                    showOverviewMode(true);
+                if (mWorkspace.enterOverviewMode()) {
                     mWorkspace.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS,
                             HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
                     return true;
@@ -3212,7 +3211,7 @@ public class Launcher extends Activity
                 if (mWorkspace.isInOverviewMode()) {
                     mWorkspace.startReordering(v);
                 } else {
-                    showOverviewMode(true);
+                    mWorkspace.enterOverviewMode();
                 }
             } else {
                 final boolean isAllAppsButton = inHotseat && isAllAppsButtonRank(
@@ -3303,28 +3302,17 @@ public class Launcher extends Activity
     }
 
     protected void showWorkspace(boolean animated) {
-        showWorkspace(WorkspaceStateTransitionAnimation.SCROLL_TO_CURRENT_PAGE, animated, null,
-                true);
+        showWorkspace(animated, null);
     }
 
-    protected void showWorkspace(boolean animated, Runnable onCompleteRunnable) {
-        showWorkspace(WorkspaceStateTransitionAnimation.SCROLL_TO_CURRENT_PAGE, animated,
-                onCompleteRunnable, true);
-    }
-
-    protected void showWorkspace(int snapToPage, boolean animated) {
-        showWorkspace(snapToPage, animated, null, true);
-    }
-
-    void showWorkspace(int snapToPage, boolean animated, Runnable onCompleteRunnable,
-            boolean notifyLauncherCallbacks) {
+    void showWorkspace(boolean animated, Runnable onCompleteRunnable) {
         boolean changed = mState != State.WORKSPACE ||
                 mWorkspace.getState() != Workspace.State.NORMAL;
         if (changed) {
             boolean wasInSpringLoadedMode = (mState != State.WORKSPACE);
             mWorkspace.setVisibility(View.VISIBLE);
             mStateTransitionAnimation.startAnimationToWorkspace(mState, Workspace.State.NORMAL,
-                    snapToPage, animated, onCompleteRunnable);
+                    animated, onCompleteRunnable);
 
             // Show the search bar (only animate if we were showing the drop target bar in spring
             // loaded mode)
@@ -3357,8 +3345,7 @@ public class Launcher extends Activity
     void showOverviewMode(boolean animated) {
         mWorkspace.setVisibility(View.VISIBLE);
         mStateTransitionAnimation.startAnimationToWorkspace(mState, Workspace.State.OVERVIEW,
-                WorkspaceStateTransitionAnimation.SCROLL_TO_CURRENT_PAGE, animated,
-                null /* onCompleteRunnable */);
+                animated, null /* onCompleteRunnable */);
         mState = State.WORKSPACE;
         onWorkspaceShown(animated);
     }
@@ -3432,8 +3419,7 @@ public class Launcher extends Activity
         }
 
         mStateTransitionAnimation.startAnimationToWorkspace(mState, Workspace.State.SPRING_LOADED,
-                WorkspaceStateTransitionAnimation.SCROLL_TO_CURRENT_PAGE, true /* animated */,
-                null /* onCompleteRunnable */);
+                true /* animated */, null /* onCompleteRunnable */);
         mState = isAppsViewVisible() ? State.APPS_SPRING_LOADED : State.WIDGETS_SPRING_LOADED;
     }
 

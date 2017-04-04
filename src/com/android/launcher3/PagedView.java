@@ -1696,11 +1696,11 @@ public abstract class PagedView extends ViewGroup implements ViewGroup.OnHierarc
         return OVERSCROLL_DAMP_FACTOR * f;
     }
 
-    public void enableFreeScroll() {
+    protected void enableFreeScroll() {
         setEnableFreeScroll(true);
     }
 
-    public void disableFreeScroll() {
+    protected void disableFreeScroll() {
         setEnableFreeScroll(false);
     }
 
